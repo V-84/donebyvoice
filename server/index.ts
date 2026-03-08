@@ -38,6 +38,14 @@ async function startServer() {
     res.json({ message: 'doneByVoice API up' });
   });
 
+  // 404 handler for API routes
+  app.all('/api/*', (req, res) => {
+    res.status(404).json({
+      error: 'Not Found',
+      message: `API endpoint ${req.method} ${req.path} does not exist`,
+    });
+  });
+
   // Serve static files from dist/public in production
   const staticPath =
     process.env.NODE_ENV === 'production'
@@ -46,10 +54,50 @@ async function startServer() {
 
   app.use(express.static(staticPath));
 
-  // Handle client-side routing - serve index.html for all routes
+  // Handle client-side routing - serve index.html for all non-API routes
   // This must be AFTER API routes
   app.get('*', (_req, res) => {
-    res.sendFile(path.join(staticPath, 'index.html'));
+    const indexPath = path.join(staticPath, 'index.html');
+
+    // Check if index.html exists (for development before building)
+    if (require('fs').existsSync(indexPath)) {
+      res.sendFile(indexPath);
+    } else {
+      // Development mode - frontend not built yet
+      res.status(200).send(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>DoneByVoice API</title>
+            <style>
+              body { font-family: system-ui; padding: 2rem; max-width: 600px; margin: 0 auto; }
+              pre { background: #f5f5f5; padding: 1rem; border-radius: 4px; overflow-x: auto; }
+              h1 { color: #10B981; }
+              code { background: #f5f5f5; padding: 0.2rem 0.4rem; border-radius: 3px; }
+            </style>
+          </head>
+          <body>
+            <h1>🚀 DoneByVoice API Server</h1>
+            <p>The API server is running, but the frontend hasn't been built yet.</p>
+
+            <h2>API Endpoints:</h2>
+            <ul>
+              <li><a href="/api"><code>GET /api</code></a> - API status</li>
+              <li><a href="/api/health"><code>GET /api/health</code></a> - Health check</li>
+              <li><code>POST /api/waitlist</code> - Join waitlist</li>
+              <li><code>GET /api/waitlist?stats=global</code> - Global stats</li>
+              <li><code>GET /api/referral?code=XXX&stats=true</code> - Referral stats</li>
+            </ul>
+
+            <h2>To build the frontend:</h2>
+            <pre>pnpm build</pre>
+
+            <h2>Or run frontend dev server:</h2>
+            <pre>pnpm dev</pre>
+          </body>
+        </html>
+      `);
+    }
   });
 
   // Error handling middleware (must be last)
