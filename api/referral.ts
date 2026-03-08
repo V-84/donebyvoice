@@ -1,8 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { count, eq } from 'drizzle-orm';
 
-import { db } from '../server/db/index.js';
-import { referrals, waitlistUsers } from '../server/db/schema.js';
+import { db, referrals, waitlistUsers } from '../server/db/serverless';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Enable CORS
