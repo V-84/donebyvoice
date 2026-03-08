@@ -55,15 +55,15 @@ export async function joinWaitlist(
  * Get user info by referral code
  */
 export async function getUserByCode(code: string): Promise<WaitlistUser> {
-  const response = await api.get<{ user: WaitlistUser }>(`/waitlist/${code}`);
-  return response.user;
+  const response = await api.get<{ user: WaitlistUser }>(`/waitlist?code=${code}`);
+  return response.data.user;
 }
 
 /**
  * Get global waitlist statistics
  */
 export async function getGlobalStats(): Promise<WaitlistStats> {
-  const response = await api.get<{ stats: WaitlistStats }>('/waitlist/stats/global');
+  const response = await api.get<{ stats: WaitlistStats }>('/waitlist?stats=global');
   return response.data.stats;
 }
 
@@ -71,7 +71,7 @@ export async function getGlobalStats(): Promise<WaitlistStats> {
  * Get referral statistics for a code
  */
 export async function getReferralStats(code: string): Promise<ReferralStats> {
-  const response = await api.get<{ stats: ReferralStats }>(`/referral/${code}/stats`);
+  const response = await api.get<{ stats: ReferralStats }>(`/referral?code=${code}&stats=true`);
   return response.data.stats;
 }
 
