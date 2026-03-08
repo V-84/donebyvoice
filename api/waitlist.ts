@@ -158,7 +158,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    return res.status(400).json({ error: 'Invalid request' });
+    // GET /api/waitlist - List all endpoints
+    if (req.method === 'GET') {
+      return res.status(200).json({
+        message: 'Waitlist API',
+        endpoints: {
+          'POST /api/waitlist': 'Join waitlist with email (body: {email, referredBy?})',
+          'GET /api/waitlist?code=XXX': 'Get user by referral code',
+          'GET /api/waitlist?stats=global': 'Get global waitlist statistics',
+        },
+        usage: 'Please provide query parameters: ?code=XXX or ?stats=global',
+      });
+    }
+
+    // Handle unsupported methods
+    return res.status(405).json({
+      error: 'Method not allowed',
+      allowedMethods: ['GET', 'POST'],
+    });
   } catch (error) {
     console.error('Waitlist API error:', error);
     return res.status(500).json({

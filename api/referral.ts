@@ -71,7 +71,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    return res.status(400).json({ error: 'Invalid request. Use ?stats=true or ?list=true' });
+    // Default GET response - show available endpoints
+    return res.status(200).json({
+      message: 'Referral API',
+      endpoints: {
+        'GET /api/referral?code=XXX&stats=true': 'Get referral statistics for a code',
+        'GET /api/referral?code=XXX&list=true': 'Get list of referrals for a code',
+      },
+      usage: 'Please provide code parameter with either stats=true or list=true',
+      example: '/api/referral?code=VOICEABC123&stats=true',
+    });
   } catch (error) {
     console.error('Referral API error:', error);
     return res.status(500).json({
