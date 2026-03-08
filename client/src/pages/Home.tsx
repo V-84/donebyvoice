@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Mail, Users, Zap, MessageCircle, CheckCircle, ArrowRight } from 'lucide-react';
+import { Mail, Users, Smartphone, MessageCircle, CheckCircle, ArrowRight } from 'lucide-react';
 
 /**
  * Design Philosophy: Organic Minimalism
@@ -66,8 +66,8 @@ export default function Home() {
       <nav className="fixed top-0 w-full bg-white/80 backdrop-blur-md z-50 border-b border-border">
         <div className="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
           <div className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-lg flex items-center justify-center">
-              <Zap className="w-6 h-6 text-white" />
+            <div className="w-10 h-10 bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center">
+              <Smartphone className="w-6 h-6 text-white" />
             </div>
             <span className="font-bold text-lg text-foreground">DoneByVoice</span>
           </div>
@@ -203,7 +203,7 @@ export default function Home() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
               {
-                icon: Zap,
+                icon: Smartphone,
                 title: 'Lifetime Pricing',
                 description: 'Lock in early-bird rates forever. No price increases for founding members.',
               },
@@ -338,8 +338,8 @@ export default function Home() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
             <div>
               <div className="flex items-center gap-2 mb-4">
-                <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center">
-                  <Zap className="w-5 h-5 text-white" />
+                <div className="w-8 h-8 bg-emerald-500 flex items-center justify-center">
+                  <Smartphone className="w-5 h-5 text-white" />
                 </div>
                 <span className="font-bold text-lg">DoneByVoice</span>
               </div>
