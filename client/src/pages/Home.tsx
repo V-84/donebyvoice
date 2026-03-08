@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
+import { ArrowRight, CheckCircle, Loader2, Mail, MessageCircle, Smartphone, Users } from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Mail, Users, Smartphone, MessageCircle, CheckCircle, ArrowRight } from 'lucide-react';
+import { getGlobalStats, joinWaitlist, type WaitlistUser } from '@/lib/api';
 
 /**
  * Design Philosophy: Organic Minimalism
@@ -15,16 +17,29 @@ import { Mail, Users, Smartphone, MessageCircle, CheckCircle, ArrowRight } from 
 export default function Home() {
   const [email, setEmail] = useState('');
   const [submitted, setSubmitted] = useState(false);
-  const [referralCode, setReferralCode] = useState('');
-  const [queuePosition, setQueuePosition] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [userData, setUserData] = useState<WaitlistUser | null>(null);
   const [socialProofCount, setSocialProofCount] = useState(0);
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
 
-  // Initialize queue position and social proof
+  // Get referredBy code from URL if present
+  const urlParams = new URLSearchParams(window.location.search);
+  const referredByCode = urlParams.get('ref') || '';
+
+  // Load global stats on mount
   useEffect(() => {
-    setQueuePosition(Math.floor(Math.random() * 500) + 1);
-    setSocialProofCount(Math.floor(Math.random() * 2000) + 500);
-    setReferralCode(`VOICE${Math.random().toString(36).substring(2, 8).toUpperCase()}`);
+    async function loadGlobalStats() {
+      try {
+        const stats = await getGlobalStats();
+        setSocialProofCount(stats.totalSignups);
+      } catch (err) {
+        console.error('Failed to load stats:', err);
+        // Fallback to default value
+        setSocialProofCount(500);
+      }
+    }
+    loadGlobalStats();
   }, []);
 
   // Countdown timer effect
@@ -32,7 +47,7 @@ export default function Home() {
     const calculateTimeLeft = () => {
       const targetDate = new Date();
       targetDate.setDate(targetDate.getDate() + 30);
-      const difference = targetDate.getTime() - new Date().getTime();
+      const difference = targetDate.getTime() - Date.now();
 
       if (difference > 0) {
         setTimeLeft({
@@ -49,14 +64,32 @@ export default function Home() {
     return () => clearInterval(timer);
   }, []);
 
-  const handleEmailSubmit = (e: React.FormEvent) => {
+  const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (email) {
+    if (!email) return;
+
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const response = await joinWaitlist(email, referredByCode || undefined);
+      setUserData(response.user);
       setSubmitted(true);
-      setTimeout(() => {
-        setEmail('');
-        setSubmitted(false);
-      }, 3000);
+
+      // Don't reset - keep the success state
+    } catch (err) {
+      console.error('Failed to join waitlist:', err);
+      const errorMessage = (err as { response?: { data?: { error?: string } } })?.response?.data?.error || 'Failed to join waitlist. Please try again.';
+      setError(errorMessage);
+
+      // If email already exists, show the existing data
+      const axiosError = err as { response?: { status?: number; data?: { user?: WaitlistUser } } };
+      if (axiosError.response?.status === 409 && axiosError.response?.data?.user) {
+        setUserData(axiosError.response.data.user);
+        setSubmitted(true);
+      }
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -147,22 +180,42 @@ export default function Home() {
                       onChange={(e) => setEmail(e.target.value)}
                       className="pl-12 h-12 rounded-lg border-emerald-200 bg-white text-foreground placeholder:text-muted-foreground"
                       required
+                      disabled={isLoading}
                     />
                   </div>
+                  {error && (
+                    <p className="text-sm text-red-600">{error}</p>
+                  )}
                   <Button
                     type="submit"
                     className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-semibold h-12 rounded-lg"
+                    disabled={isLoading}
                   >
-                    Claim Your Spot
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                        Joining...
+                      </>
+                    ) : (
+                      'Claim Your Spot'
+                    )}
                   </Button>
                 </form>
               ) : (
-                <div className="flex items-center gap-3 p-4 bg-white rounded-lg border border-emerald-200">
-                  <CheckCircle className="w-6 h-6 text-emerald-500 flex-shrink-0" />
-                  <div>
-                    <p className="font-semibold text-foreground">You're in!</p>
-                    <p className="text-sm text-muted-foreground">Check your email for next steps.</p>
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3 p-4 bg-white rounded-lg border border-emerald-200">
+                    <CheckCircle className="w-6 h-6 text-emerald-500 flex-shrink-0" />
+                    <div>
+                      <p className="font-semibold text-foreground">You're in!</p>
+                      <p className="text-sm text-muted-foreground">Your spot is secured.</p>
+                    </div>
                   </div>
+                  {userData && (
+                    <div className="bg-white rounded-lg p-4 border border-emerald-200 space-y-2">
+                      <p className="text-sm text-muted-foreground">Your Position: <span className="font-bold text-emerald-600">#{userData.queuePosition}</span></p>
+                      <p className="text-sm text-muted-foreground">Referral Code: <span className="font-mono font-bold text-emerald-600">{userData.referralCode}</span></p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -234,44 +287,56 @@ export default function Home() {
       </section>
 
       {/* Referral Tracker */}
-      <section className="py-20 px-6 bg-gradient-to-br from-emerald-50 to-white">
-        <div className="max-w-4xl mx-auto">
-          <div className="bg-white rounded-2xl border border-border p-12 shadow-lg">
-            <div className="text-center mb-12">
-              <h2 className="text-3xl font-bold text-foreground mb-4">Your Referral Progress</h2>
-              <p className="text-muted-foreground">Share your unique code and climb the waitlist</p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {/* Queue Position */}
-              <div className="bg-gradient-to-br from-emerald-50 to-emerald-100/50 rounded-xl p-8 border border-emerald-200">
-                <p className="text-sm font-mono text-muted-foreground uppercase tracking-widest mb-4">Your Position</p>
-                <div className="text-5xl font-bold text-emerald-600 font-mono mb-4">#{queuePosition}</div>
-                <p className="text-muted-foreground">
-                  Move up by referring friends. Each referral moves you {Math.floor(Math.random() * 5) + 5} spots closer.
-                </p>
+      {userData && (
+        <section className="py-20 px-6 bg-gradient-to-br from-emerald-50 to-white">
+          <div className="max-w-4xl mx-auto">
+            <div className="bg-white rounded-2xl border border-border p-12 shadow-lg">
+              <div className="text-center mb-12">
+                <h2 className="text-3xl font-bold text-foreground mb-4">Your Referral Progress</h2>
+                <p className="text-muted-foreground">Share your unique code and climb the waitlist</p>
               </div>
 
-              {/* Referral Code */}
-              <div className="bg-gradient-to-br from-blue-50 to-blue-100/50 rounded-xl p-8 border border-blue-200">
-                <p className="text-sm font-mono text-muted-foreground uppercase tracking-widest mb-4">Your Code</p>
-                <div className="flex items-center gap-3 mb-4">
-                  <code className="text-2xl font-bold text-blue-600 font-mono">{referralCode}</code>
-                  <button
-                    onClick={() => navigator.clipboard.writeText(referralCode)}
-                    className="p-2 hover:bg-blue-200 rounded-lg transition-colors"
-                  >
-                    📋
-                  </button>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {/* Queue Position */}
+                <div className="bg-gradient-to-br from-emerald-50 to-emerald-100/50 rounded-xl p-8 border border-emerald-200">
+                  <p className="text-sm font-mono text-muted-foreground uppercase tracking-widest mb-4">Your Position</p>
+                  <div className="text-5xl font-bold text-emerald-600 font-mono mb-4">#{userData.queuePosition}</div>
+                  <p className="text-muted-foreground">
+                    Move up by referring friends. Each referral moves you 5 spots closer.
+                  </p>
+                  {userData.referralCount > 0 && (
+                    <p className="text-sm text-emerald-600 font-semibold mt-4">
+                      🎉 {userData.referralCount} {userData.referralCount === 1 ? 'referral' : 'referrals'} so far!
+                    </p>
+                  )}
                 </div>
-                <p className="text-muted-foreground">
-                  Share this code with friends. They'll get priority access, and you'll move up.
-                </p>
+
+                {/* Referral Code */}
+                <div className="bg-gradient-to-br from-blue-50 to-blue-100/50 rounded-xl p-8 border border-blue-200">
+                  <p className="text-sm font-mono text-muted-foreground uppercase tracking-widest mb-4">Your Code</p>
+                  <div className="flex items-center gap-3 mb-4">
+                    <code className="text-2xl font-bold text-blue-600 font-mono">{userData.referralCode}</code>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const url = `${window.location.origin}?ref=${userData.referralCode}`;
+                        navigator.clipboard.writeText(url);
+                      }}
+                      className="p-2 hover:bg-blue-200 rounded-lg transition-colors"
+                      title="Copy referral link"
+                    >
+                      📋
+                    </button>
+                  </div>
+                  <p className="text-muted-foreground">
+                    Share this code with friends. They'll get priority access, and you'll move up.
+                  </p>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* How It Works */}
       <section className="py-20 px-6">
