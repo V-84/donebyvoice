@@ -27,4 +27,4 @@ export const db = drizzle(client, { schema });
 
 // Export schema
 export { schema };
-export * from './schema';
+export * from './schema.js';
