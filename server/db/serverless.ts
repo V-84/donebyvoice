@@ -20,6 +20,8 @@ if (!connectionString) {
 const client = postgres(connectionString, {
   prepare: false,
   max: 1, // Single connection for serverless
+  connect_timeout: 15, // Fail fast instead of hanging until Vercel's 300s limit
+  ssl: 'require', // Required for Supabase connection pooler
 });
 
 // Create drizzle instance
